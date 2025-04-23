@@ -1,0 +1,637 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    /* Apply border-box globally */
+}
+
+:root {
+    --primary-color: #0d47a1;
+    /* A deeper blue */
+    --secondary-color: #1976d2;
+    /* A lighter blue */
+    --light-gray: #f8f9fa;
+    --medium-gray: #e9ecef;
+    --dark-gray: #343a40;
+    --text-color: #212529;
+}
+
+body {
+    font-family: 'Cairo', sans-serif;
+    /* Apply Cairo font */
+    margin: 0;
+    padding: 0;
+    background-color: var(--light-gray);
+    color: var(--text-color);
+    direction: rtl;
+    line-height: 1.8;
+    /* Increased line height for readability */
+    overflow-x: hidden;
+    /* Prevent horizontal scrolling */
+}
+
+.container {
+    width: 90%;
+    max-width: 1100px;
+    margin: 0 auto;
+    /* padding: 0 15px; */
+    /* Remove container padding, sections handle it */
+    box-sizing: border-box;
+    /* Ensure padding is included in width */
+}
+
+header {
+    background: var(--primary-color);
+    color: #fff;
+    padding: 30px 0;
+    /* Vertical padding only */
+    text-align: center;
+    border-bottom: 5px solid var(--secondary-color);
+    margin-bottom: 30px;
+    /* Add space below header */
+}
+
+header .container,
+footer .container {
+    /* Ensure container inside header/footer behaves correctly */
+    padding: 0 15px;
+    /* Add padding back specifically for header/footer content */
+}
+
+header h1 {
+    margin: 0 0 10px 0;
+    font-size: 2.8em;
+    font-weight: 700;
+}
+
+header p {
+    font-size: 1.3em;
+    margin: 0;
+    opacity: 0.9;
+}
+
+section {
+    padding: 30px 15px;
+    /* Adjust section padding to match container gap */
+    margin-bottom: 30px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+    box-sizing: border-box;
+}
+
+section h2 {
+    color: var(--primary-color);
+    text-align: center;
+    margin-top: 0;
+    /* Remove default top margin */
+    margin-bottom: 30px;
+    /* More space below heading */
+    font-size: 2.2em;
+    font-weight: 700;
+}
+
+#intro p,
+#vision p,
+#media p,
+#cta p {
+    font-size: 1.1em;
+    text-align: justify;
+    /* Justify text for a cleaner look */
+    margin-bottom: 20px;
+}
+
+/* Styles for Intro Profile Image */
+#intro .intro-profile-image {
+    display: block;
+    /* Center block element */
+    width: 70%;
+    max-width: 250px;
+    /* Adjust size as needed */
+    height: auto;
+    /* Maintain aspect ratio */
+    margin: 25px auto;
+    border-radius: 8px;
+    /* Slightly rounded corners */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    object-fit: cover;
+}
+
+.media-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+    /* Add margin if quote is present */
+}
+
+/* Remove old direct image styles */
+/* #qualities .quality-image { ... } */
+/* .gallery-image { ... } */
+/* .gallery-image:hover { ... } */
+
+/* New Image Container Styles */
+.image-container {
+    position: relative;
+    /* Context for absolute positioning */
+    overflow: hidden;
+    /* Clip blurred edges */
+    background-color: #ddd;
+    /* Fallback background */
+    width: 100%;
+}
+
+.quality-image-container {
+    height: 200px;
+    /* Maintain height */
+    border-radius: 10px 10px 0 0;
+    /* Maintain top radius */
+    margin-bottom: 25px;
+    /* Keep space below */
+}
+
+.gallery-image-container {
+    height: 230px;
+    /* Maintain height */
+    border-radius: 8px;
+    /* Maintain radius */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    /* Keep shadow on container */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.gallery-image-container:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+/* Blurred Background Image Styles */
+.image-bg {
+    position: absolute;
+    top: -10%;
+    /* Offset for scale */
+    left: -10%;
+    /* Offset for scale */
+    width: 120%;
+    /* Scale up to avoid blurred edges */
+    height: 120%;
+    /* Scale up */
+    object-fit: cover;
+    /* Cover the area */
+    filter: blur(20px) brightness(0.8);
+    /* Adjust blur/brightness */
+    z-index: 1;
+    /* Behind foreground */
+}
+
+/* Sharp Foreground Image Styles */
+.image-fg {
+    position: relative;
+    /* To stack above bg */
+    z-index: 2;
+    /* Above background */
+    display: block;
+    /* Remove extra space */
+    width: 100%;
+    /* Take full container width */
+    height: 100%;
+    /* Take full container height */
+    object-fit: contain;
+    /* Fit entire image within bounds */
+    margin: auto;
+    /* Should center if needed */
+}
+
+/* Adjustments for Qualities items */
+#qualities .quality-item {
+    /* Ensure padding is still correct */
+    padding: 0;
+    padding-bottom: 25px;
+}
+
+/* Adjustments for Media Gallery */
+.media-gallery {
+    /* Ensure grid works with the new containers */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+#vision ul {
+    list-style: none;
+    padding: 0;
+    margin-top: 20px;
+}
+
+#vision li {
+    background: var(--medium-gray);
+    margin-bottom: 12px;
+    padding: 15px 20px;
+    border-radius: 5px;
+    border-right: 7px solid var(--secondary-color);
+    font-size: 1.1em;
+    transition: background-color 0.3s ease;
+}
+
+#vision li:hover {
+    background-color: #dcdcdc;
+    /* Slight hover effect */
+}
+
+#cta {
+    background: var(--secondary-color);
+    color: #fff;
+    text-align: center;
+    padding: 40px 20px;
+}
+
+#cta h2 {
+    color: #fff;
+    margin-bottom: 15px;
+}
+
+#cta p {
+    font-size: 1.2em;
+    text-align: center;
+    /* Center CTA text */
+}
+
+#cta strong {
+    display: block;
+    /* Make date stand out */
+    margin-top: 15px;
+    font-size: 1.3em;
+}
+
+footer {
+    text-align: center;
+    padding: 25px 0;
+    /* Vertical padding only */
+    margin-top: 40px;
+    background: var(--dark-gray);
+    color: var(--light-gray);
+    font-size: 0.95em;
+}
+
+/* Enhanced Responsive adjustments */
+@media (max-width: 992px) {
+    .container {
+        width: 95%;
+    }
+
+    header h1 {
+        font-size: 2.5em;
+    }
+
+    section h2 {
+        font-size: 2em;
+    }
+}
+
+@media (max-width: 768px) {
+    header h1 {
+        font-size: 2.2em;
+    }
+
+    header p {
+        font-size: 1.1em;
+    }
+
+    section h2 {
+        font-size: 1.8em;
+    }
+
+    #intro .intro-profile-image {
+        max-width: 200px;
+    }
+
+    /* Grid adjusts automatically, no specific changes needed here */
+    #vision li {
+        font-size: 1em;
+        padding: 12px 15px;
+    }
+
+    #cta p,
+    #cta strong {
+        font-size: 1.1em;
+    }
+
+    #qualities .quality-image-container {
+        height: 180px;
+    }
+
+    .gallery-image-container {
+        height: 200px;
+    }
+}
+
+@media (max-width: 576px) {
+    body {
+        line-height: 1.7;
+    }
+
+    header {
+        padding: 20px 0;
+    }
+
+    header h1 {
+        font-size: 1.8em;
+    }
+
+    header p {
+        font-size: 1em;
+    }
+
+    section {
+        padding: 20px 15px;
+        margin-bottom: 20px;
+    }
+
+    section h2 {
+        font-size: 1.6em;
+        margin-bottom: 20px;
+    }
+
+    #intro p,
+    #vision p,
+    #media p,
+    #cta p {
+        font-size: 1em;
+    }
+
+    #intro .intro-profile-image {
+        max-width: 180px;
+    }
+
+    .media-gallery {
+        grid-template-columns: 1fr;
+        /* Single column on very small screens */
+        gap: 15px;
+    }
+
+    .gallery-image-container {
+        height: 180px;
+    }
+
+    #cta {
+        padding: 30px 15px;
+    }
+
+    #qualities .quality-image-container {
+        height: 160px;
+    }
+}
+
+/* Styles for Qualities Section */
+#qualities {
+    background-color: var(--medium-gray);
+    /* Different background for the whole section */
+    padding-left: 15px;
+    /* Match container gap */
+    padding-right: 15px;
+    /* Match container gap */
+}
+
+#qualities .qualities-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 30px;
+    /* Slightly larger gap */
+    margin-top: 30px;
+}
+
+#qualities .quality-item {
+    text-align: center;
+    background-color: #fff;
+    padding: 0;
+    /* Remove padding from item to allow image to span full width */
+    padding-bottom: 25px;
+    /* Add padding only at the bottom */
+    border-radius: 10px;
+    border: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.06);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+    /* Ensure image corners match item corners */
+}
+
+#qualities .quality-item:hover {
+    transform: translateY(-8px);
+    /* Lift higher on hover */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    /* Stronger shadow on hover */
+}
+
+/* Styles for Qualities Section Images (already adjusted for img) */
+/* #qualities .quality-image { ... } */
+
+#qualities .quality-item h3 {
+    color: var(--primary-color);
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.5em;
+    font-weight: 700;
+    padding: 0 20px;
+    /* Add padding back for text */
+}
+
+#qualities .quality-item p {
+    font-size: 1.05em;
+    line-height: 1.7;
+    text-align: center;
+    color: var(--dark-gray);
+    padding: 0 20px;
+    /* Add padding back for text */
+}
+
+/* Adjustments for Qualities section on smaller screens */
+@media (max-width: 768px) {
+    #qualities .qualities-container {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+    }
+
+    #qualities .quality-item h3 {
+        font-size: 1.3em;
+    }
+
+    #qualities .quality-image-container {
+        height: 180px;
+        /* Adjust height for smaller screens */
+    }
+}
+
+@media (max-width: 576px) {
+    #qualities .qualities-container {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    #qualities .quality-item {
+        padding-bottom: 20px;
+    }
+
+    #qualities .quality-item h3 {
+        font-size: 1.25em;
+        padding: 0 15px;
+    }
+
+    #qualities .quality-item p {
+        padding: 0 15px;
+    }
+
+    #qualities .quality-image-container {
+        height: 160px;
+        /* Adjust height for very small screens */
+        border-radius: 10px 10px 0 0;
+        /* Ensure radius is consistent */
+    }
+}
+
+/* Styles for Updated Contact Section */
+#contact {
+    background-color: var(--light-gray);
+    text-align: center;
+    padding: 40px 20px;
+    /* Add padding */
+    padding-left: 15px;
+    /* Match container gap */
+    padding-right: 15px;
+    /* Match container gap */
+}
+
+#contact h2 {
+    color: var(--primary-color);
+    /* Match other section headings */
+    margin-bottom: 20px;
+}
+
+#contact p {
+    text-align: center;
+    margin-bottom: 15px;
+    /* Reduced margin */
+    font-size: 1.1em;
+    max-width: 600px;
+    /* Limit width of intro paragraph */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.contact-details {
+    background: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+    max-width: 450px;
+    /* Limit width of the contact box */
+    margin: 30px auto 0 auto;
+    /* Center the box */
+}
+
+.contact-details .phone-number {
+    font-size: 1.8em;
+    font-weight: bold;
+    color: var(--dark-gray);
+    margin-bottom: 25px;
+    direction: ltr;
+    /* Keep phone number LTR */
+    text-align: center;
+}
+
+.contact-icons {
+    margin-bottom: 25px;
+}
+
+.contact-icon {
+    display: inline-block;
+    font-size: 2.5em;
+    /* Larger icons */
+    margin: 0 20px;
+    transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.contact-icon.phone {
+    color: var(--secondary-color);
+    /* Blue */
+}
+
+.contact-icon.phone:hover {
+    color: #1565c0;
+    /* Darker blue */
+    transform: scale(1.1);
+}
+
+.contact-icon.whatsapp {
+    color: #25D366;
+    /* WhatsApp green */
+}
+
+.contact-icon.whatsapp:hover {
+    color: #1DA851;
+    /* Darker green */
+    transform: scale(1.1);
+}
+
+.contact-details small {
+    display: block;
+    color: #6c757d;
+    font-size: 0.95em;
+}
+
+/* Remove old contact styles if they exist (like .contact-options, .contact-option, .contact-button) */
+/* These might have been added in previous steps */
+.contact-options,
+.contact-option,
+.contact-button {
+    /* You might comment these out or delete if sure they aren't used elsewhere */
+    /* For now, just ensuring they don't conflict */
+}
+
+/* Footer styles */
+footer {
+    text-align: center;
+    padding: 25px 0;
+    /* Vertical padding only */
+    margin-top: 40px;
+    background: var(--dark-gray);
+    color: var(--light-gray);
+    font-size: 0.95em;
+}
+
+/* Style for Inspirational Quote */
+.inspirational-quote {
+    display: block;
+    font-size: 1.4em;
+    font-style: italic;
+    font-weight: bold;
+    color: var(--primary-color);
+    text-align: center;
+    padding: 20px 15px;
+    margin: 10px auto 30px auto;
+    /* Adjust margin */
+    max-width: 80%;
+    border-right: 5px solid var(--secondary-color);
+    border-left: none;
+    /* Remove default blockquote border */
+    background-color: var(--light-gray);
+    border-radius: 0 8px 8px 0;
+    /* Match border side */
+    quotes: "\201C" "\201D";
+    /* Optional: Add quote marks via CSS */
+}
+
+.inspirational-quote::before {
+    /* content: open-quote; */
+    /* Optional: display opening quote */
+}
+
+.inspirational-quote::after {
+    /* content: close-quote; */
+    /* Optional: display closing quote */
+}
+
+/* Remove placeholder text styles */
+/* .media-gallery .placeholder-media p { ... } */
