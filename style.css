@@ -635,3 +635,82 @@ footer {
 
 /* Remove placeholder text styles */
 /* .media-gallery .placeholder-media p { ... } */
+
+/* Style for Mukhtar Role Section */
+#mukhtar-role {
+    background-color: #f9f9f9;
+    /* Light background for the section */
+    padding: 2rem 1rem;
+    /* Add some padding */
+    border-radius: 8px;
+    /* Rounded corners */
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+}
+
+#mukhtar-role h2 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: var(--primary-color);
+}
+
+.role-items-container {
+    display: flex;
+    flex-direction: column;
+    /* Stack items vertically */
+    gap: 1.5rem;
+    /* Space between items */
+}
+
+.role-item {
+    background-color: #fff;
+    /* White background for each item */
+    padding: 1.5rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    /* Subtle shadow */
+    text-align: center;
+    /* Center align text within the item */
+}
+
+.role-item h3 {
+    color: var(--secondary-color);
+    /* Use secondary color for heading */
+    margin-bottom: 0.75rem;
+    font-size: 1.3rem;
+}
+
+.role-item h3 i {
+    margin-left: 8px;
+    /* Space between icon and text */
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    /* Slightly smaller icon */
+}
+
+.role-item p {
+    color: #555;
+    line-height: 1.6;
+    margin-bottom: 0;
+    /* Remove default paragraph margin */
+}
+
+/* Responsive adjustments if needed */
+@media (min-width: 768px) {
+    .role-items-container {
+        flex-direction: row;
+        /* Side-by-side on larger screens */
+        justify-content: space-around;
+        /* Distribute space */
+    }
+
+    .role-item {
+        flex-basis: 45%;
+        /* Each item takes up roughly half the width */
+    }
+}
+
+/* Media Section Adjustments */
+#media {
+    padding-top: 2rem;
+}
