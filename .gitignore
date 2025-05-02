@@ -1,1 +1,4 @@
 .DS_Store
+data/*
+pop_analysis/__pycache__/
+notebook.ipynb
