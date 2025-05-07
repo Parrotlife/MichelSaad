@@ -112,17 +112,26 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
 
     # Proceed only if df_votes is still valid (it might have been cleared above)
     if st.session_state.df_votes is not None and not st.session_state.df_votes.empty:
-        st.sidebar.header("Options")
+        st.sidebar.header("Filters")
 
-        st.sidebar.subheader("Filter Data")
-        # Add the permanent filter checkbox here
-        if "show_not_voted_filter" not in st.session_state:
-            st.session_state.show_not_voted_filter = False
+        # === START OF REPLACEMENT FOR SIDEBAR FILTERING UI ===
+        st.sidebar.subheader("Filter by Vote Status")  # Main subheader for filtering controls
 
-        st.session_state.show_not_voted_filter = st.sidebar.checkbox(
-            "Show only 'Not Voted'", value=st.session_state.show_not_voted_filter, key="show_not_voted_filter_checkbox"
+        # --- START: New Radio Button Group for Vote Status Display ---
+        if "permanent_vote_display_filter" not in st.session_state:
+            st.session_state.permanent_vote_display_filter = "Show All"
+
+        vote_display_options = ["Show All", "Show only 'Voted'", "Show only 'Not Voted'"]
+        st.session_state.permanent_vote_display_filter = st.sidebar.radio(
+            "Select Vote Status:",
+            options=vote_display_options,
+            index=vote_display_options.index(st.session_state.permanent_vote_display_filter),
+            key="permanent_vote_display_filter_radio",
         )
-        st.sidebar.markdown("---")  # Visual separator
+        # --- END: New Radio Button Group ---
+
+        # User's existing/desired structure for column-based filters follows
+        st.sidebar.markdown("---")
         st.sidebar.subheader("Other Filters")
 
         if st.sidebar.button("Add Filter", key="add_filter_btn_votes"):
@@ -293,14 +302,15 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
             # Start with a copy of the dynamically filtered data
             df_for_editor = st.session_state.filtered_df_votes.copy()
 
-            # Apply the "Show only 'Not Voted'" permanent filter if active
-            if st.session_state.show_not_voted_filter:
+            # Apply the permanent vote display filter based on radio button selection
+            if st.session_state.permanent_vote_display_filter == "Show only 'Voted'":
                 if "voted" in df_for_editor.columns:
-                    # Ensure 'voted' is boolean before applying the ~ operator
+                    df_for_editor = df_for_editor[df_for_editor["voted"].astype(bool)].copy()
+            elif st.session_state.permanent_vote_display_filter == "Show only 'Not Voted'":
+                if "voted" in df_for_editor.columns:
                     df_for_editor = df_for_editor[~df_for_editor["voted"].astype(bool)].copy()
-                # If 'voted' column is missing, the warning from count display should cover it.
+            # If "Show All", no further filtering is done on df_for_editor here.
 
-            # df_display is what will be shown and edited in st.data_editor
             df_display = df_for_editor
 
             if "voted" in df_display.columns:
