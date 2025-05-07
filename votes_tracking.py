@@ -115,6 +115,16 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
         st.sidebar.header("Options")
 
         st.sidebar.subheader("Filter Data")
+        # Add the permanent filter checkbox here
+        if "show_not_voted_filter" not in st.session_state:
+            st.session_state.show_not_voted_filter = False
+
+        st.session_state.show_not_voted_filter = st.sidebar.checkbox(
+            "Show only 'Not Voted'", value=st.session_state.show_not_voted_filter, key="show_not_voted_filter_checkbox"
+        )
+        st.sidebar.markdown("---")  # Visual separator
+        st.sidebar.subheader("Other Filters")
+
         if st.sidebar.button("Add Filter", key="add_filter_btn_votes"):
             new_filter_id = pd.Timestamp.now().strftime("%Y%m%d%H%M%S%f")
             st.session_state.active_filters_votes.append({"id": new_filter_id, "column": "None", "values": []})
@@ -263,23 +273,37 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
 
         st.header("Voters List")
         if st.session_state.filtered_df_votes is not None:
+            # --- Calculate and Display Vote Counts (based on st.session_state.filtered_df_votes) ---
             if not st.session_state.filtered_df_votes.empty:
                 total_in_filtered = len(st.session_state.filtered_df_votes)
                 if "voted" in st.session_state.filtered_df_votes.columns:
                     voted_in_filtered = st.session_state.filtered_df_votes["voted"].astype(bool).sum()
                     col1_count, col2_count = st.columns(2)
                     with col1_count:
-                        st.metric(label="Voted (Filtered View)", value=voted_in_filtered)
+                        st.metric(label="Voted (User Filters)", value=voted_in_filtered)
                     with col2_count:
-                        st.metric(label="Total (Filtered View)", value=total_in_filtered)
+                        st.metric(label="Total (User Filters)", value=total_in_filtered)
                     st.markdown("---")
                 else:
                     st.warning("The 'voted' column is missing, cannot display vote count.")
             else:
-                st.info("No voters in the current filtered view to count.")
+                st.info("No voters in current user-filtered view to count.")  # Clarified message
 
-            df_display = st.session_state.filtered_df_votes.copy()
-            if "voted" in df_display.columns:  # Ensure 'voted' column exists before trying to astype
+            # --- Prepare DataFrame for st.data_editor (df_for_editor) ---
+            # Start with a copy of the dynamically filtered data
+            df_for_editor = st.session_state.filtered_df_votes.copy()
+
+            # Apply the "Show only 'Not Voted'" permanent filter if active
+            if st.session_state.show_not_voted_filter:
+                if "voted" in df_for_editor.columns:
+                    # Ensure 'voted' is boolean before applying the ~ operator
+                    df_for_editor = df_for_editor[~df_for_editor["voted"].astype(bool)].copy()
+                # If 'voted' column is missing, the warning from count display should cover it.
+
+            # df_display is what will be shown and edited in st.data_editor
+            df_display = df_for_editor
+
+            if "voted" in df_display.columns:
                 df_display["voted"] = df_display["voted"].astype(bool)
             else:
                 st.error("Critical: 'voted' column is missing from display data. Cannot proceed with editing.")
@@ -299,13 +323,17 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
                 num_rows="dynamic",
             )
 
-            if not edited_df.equals(st.session_state.filtered_df_votes):
-                # Merge on our new unique ID: voter_id (stored in st.session_state.id_column_name)
+            # --- Detect changes and update DB ---
+            # Compare edited_df with df_display (what was actually sent to the editor)
+            if not edited_df.equals(df_display):
+                # Merge edited_df (potentially a subset if "show_not_voted_filter" was on)
+                # with st.session_state.filtered_df_votes (the broader context from dynamic filters)
+                # to correctly identify original 'voted' status for comparison.
                 comparison_df = st.session_state.filtered_df_votes.merge(
-                    edited_df,
+                    edited_df,  # Contains voter_id and new 'voted_edited' status from the editor
                     on=st.session_state.id_column_name,
                     suffixes=("_orig", "_edited"),
-                    how="inner",
+                    how="inner",  # Ensures we only process rows that were actually in edited_df (i.e., displayed)
                 )
                 changed_rows = comparison_df[comparison_df["voted_orig"] != comparison_df["voted_edited"]]
                 if not changed_rows.empty:
@@ -356,11 +384,6 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
                                             st.error(f"Error re-applying filter on '{col_reapply}': {e_reapply}")
                             st.session_state.filtered_df_votes = temp_df_after_update
                             st.rerun()
-                # This elif was for other changes, which should not happen if only 'voted' is editable.
-                # elif not changed_rows.empty:
-                #    st.session_state.filtered_df_votes = edited_df.copy()
-                #    st.rerun()
-
             st.write(f"Displaying {len(edited_df)} voter(s).")
         else:
             st.info("No data to display. You might need to reset the database or check the Excel file.")
