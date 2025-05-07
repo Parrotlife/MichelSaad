@@ -2,3 +2,6 @@
 data/*
 pop_analysis/__pycache__/
 notebook.ipynb
+# Exception for specific data file
+!data/final--القاع-2025-filtered.xlsx
+votes_data.db
