@@ -41,7 +41,7 @@ def init_db():
 def load_data_from_db():
     """Loads data from the SQLite database into a pandas DataFrame."""
     if not os.path.exists(DB_FILE):
-        st.warning("Database file not found. Please initialize or reset.")
+        st.warning("ملف قاعدة البيانات غير موجود. يرجى التهيئة أو إعادة التعيين.")
         return None
     try:
         conn = sqlite3.connect(DB_FILE)
@@ -49,7 +49,7 @@ def load_data_from_db():
         conn.close()
         return df
     except Exception as e:
-        st.error(f"Error loading data from database: {e}")
+        st.error(f"خطأ في تحميل البيانات من قاعدة البيانات: {e}")
         return None
 
 
@@ -65,12 +65,76 @@ def update_voted_status(person_id, id_column_name, voted_status):  # id_column_n
         conn.close()
         return True
     except Exception as e:
-        st.error(f"Error updating voted status for ID {person_id} ({id_column_name}): {e}")
+        st.error(f"خطأ في تحديث حالة التصويت للمعرف {person_id} ({id_column_name}): {e}")
+        return False
+
+
+def load_db_from_csv(uploaded_file):
+    """Loads data from an uploaded CSV file and replaces the current database."""
+    try:
+        df_csv = pd.read_csv(uploaded_file)
+
+        required_columns = ["voter_id", "voted"]
+        missing_cols = [col for col in required_columns if col not in df_csv.columns]
+        if missing_cols:
+            st.error(f"ملف CSV المرفوع ينقصه الأعمدة المطلوبة: {', '.join(missing_cols)}")
+            return False
+
+        if "voter_id" in df_csv.columns:
+            try:
+                df_csv["voter_id"] = df_csv["voter_id"].astype(int)
+            except ValueError:
+                st.error("لا يمكن تحويل عمود 'voter_id' إلى أرقام صحيحة. يرجى التحقق من البيانات.")
+                return False
+
+        if "voted" in df_csv.columns:
+            if df_csv["voted"].dtype != bool:
+                try:
+                    if df_csv["voted"].dtype == "object":
+                        df_csv["voted"] = df_csv["voted"].replace(
+                            {
+                                "true": True,
+                                "True": True,
+                                "TRUE": True,
+                                "false": False,
+                                "False": False,
+                                "FALSE": False,
+                                "1": True,
+                                1: True,
+                                "0": False,
+                                0: False,
+                            }
+                        )
+                    df_csv["voted"] = df_csv["voted"].astype(bool)
+                except Exception as e:
+                    st.error(
+                        f"لا يمكن تحويل عمود 'voted' ({df_csv['voted'].dtype}) إلى قيم منطقية: {e}. "
+                        "يرجى التأكد أن القيم هي True/False."
+                    )
+                    return False
+
+        conn = sqlite3.connect(DB_FILE)
+        df_csv.to_sql(TABLE_NAME, conn, if_exists="replace", index=False)
+        conn.close()
+
+        st.session_state.df_votes = None
+        st.session_state.filtered_df_votes = None
+        st.session_state.active_filters_votes = []
+        st.session_state.db_just_initialized = True
+
+        st.success("تم تحميل قاعدة البيانات بنجاح من ملف CSV.")
+        return True
+
+    except pd.errors.EmptyDataError:
+        st.error("ملف CSV المرفوع فارغ.")
+        return False
+    except Exception as e:
+        st.error(f"حدث خطأ أثناء تحميل قاعدة البيانات من CSV: {e}")
         return False
 
 
 st.set_page_config(layout="wide")
-st.title("Voter Tracking")
+st.title("تتبع الناخبين")
 
 # --- Initialize DB on first run or if reset ---
 init_db()
@@ -95,13 +159,13 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
     # Critical check: Ensure voter_id column exists in the loaded DataFrame
     if st.session_state.id_column_name not in df_original.columns:
         st.error(
-            f"The required internal ID column ('{st.session_state.id_column_name}') is missing. "
-            "This might be due to an outdated database schema. "
-            "Please reset the database using the 'Reset Database' button in the sidebar."
+            f"عمود المعرف الداخلي المطلوب ('{st.session_state.id_column_name}') مفقود. "
+            "قد يكون هذا بسبب مخطط قاعدة بيانات قديم. "
+            "يرجى إعادة تعيين قاعدة البيانات باستخدام زر 'إعادة تعيين قاعدة البيانات' في الشريط الجانبي."
         )
         # Clean up potentially problematic session state if we stop
         if os.path.exists(DB_FILE):  # If DB exists but is faulty
-            st.warning("Faulty database detected.")
+            st.warning("تم الكشف عن قاعدة بيانات معيبة.")
         # Allow app to render sidebar for reset
         # st.stop() # Consider if stopping here is best or allowing sidebar access.
         # Forcing a clear if essential ID is missing might be too much if user just wants to reset.
@@ -112,18 +176,18 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
 
     # Proceed only if df_votes is still valid (it might have been cleared above)
     if st.session_state.df_votes is not None and not st.session_state.df_votes.empty:
-        st.sidebar.header("Filters")
+        st.sidebar.header("عوامل التصفية")
 
         # === START OF REPLACEMENT FOR SIDEBAR FILTERING UI ===
-        st.sidebar.subheader("Filter by Vote Status")  # Main subheader for filtering controls
+        st.sidebar.subheader("التصفية حسب حالة التصويت")  # Main subheader for filtering controls
 
         # --- START: New Radio Button Group for Vote Status Display ---
         if "permanent_vote_display_filter" not in st.session_state:
-            st.session_state.permanent_vote_display_filter = "Show All"
+            st.session_state.permanent_vote_display_filter = "عرض الكل"
 
-        vote_display_options = ["Show All", "Show only 'Voted'", "Show only 'Not Voted'"]
+        vote_display_options = ["عرض الكل", "عرض من صوت فقط", "عرض من لم يصوت فقط"]
         st.session_state.permanent_vote_display_filter = st.sidebar.radio(
-            "Select Vote Status:",
+            "اختر حالة التصويت:",
             options=vote_display_options,
             index=vote_display_options.index(st.session_state.permanent_vote_display_filter),
             key="permanent_vote_display_filter_radio",
@@ -132,20 +196,20 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
 
         # User's existing/desired structure for column-based filters follows
         st.sidebar.markdown("---")
-        st.sidebar.subheader("Other Filters")
+        st.sidebar.subheader("عوامل تصفية أخرى")
 
-        if st.sidebar.button("Add Filter", key="add_filter_btn_votes"):
+        if st.sidebar.button("إضافة عامل تصفية", key="add_filter_btn_votes"):
             new_filter_id = pd.Timestamp.now().strftime("%Y%m%d%H%M%S%f")
-            st.session_state.active_filters_votes.append({"id": new_filter_id, "column": "None", "values": []})
+            st.session_state.active_filters_votes.append({"id": new_filter_id, "column": "لا شيء", "values": []})
             st.rerun()
 
         filters_to_remove_votes = []
         for i, filt in enumerate(st.session_state.active_filters_votes):
             filter_id = filt["id"]
             st.sidebar.markdown("---")
-            cols_with_none = ["None"] + [col for col in columns_available if col != "voted"]
+            cols_with_none = ["لا شيء"] + [col for col in columns_available if col != "voted"]
             selected_column = st.sidebar.selectbox(
-                "Filter by column:",
+                "التصفية حسب العمود:",
                 cols_with_none,
                 index=cols_with_none.index(filt["column"]) if filt["column"] in cols_with_none else 0,
                 key=f"filter_col_select_votes_{filter_id}",
@@ -154,7 +218,7 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
                 st.session_state.active_filters_votes[i]["column"] = selected_column
                 st.session_state.active_filters_votes[i]["values"] = []
                 st.rerun()
-            if selected_column != "None":
+            if selected_column != "لا شيء":
                 if selected_column in df_original.columns:
                     # Calculate value counts and sort unique values by frequency
                     value_counts = df_original[selected_column].value_counts()
@@ -165,17 +229,15 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
                         try:
                             display_options = [str(v) for v in options_sorted_by_count]
                         except Exception as e_conv:
-                            st.warning(
-                                f"Filter opt conversion err for '{selected_column}': {e_conv}. Options affected."
-                            )
+                            st.warning(f"خطأ في تحويل خيار التصفية لـ '{selected_column}': {e_conv}. تأثرت الخيارات.")
                             # Fallback to unique values if string conversion of value_counts index fails for some reason
                             try:
                                 unique_values_fallback = df_original[selected_column].dropna().unique().tolist()
                                 display_options = [str(v) for v in unique_values_fallback if pd.notna(v)]
                             except Exception as e_fallback_conv:
-                                st.error(f"Critical filter opt conv err for '{selected_column}': {e_fallback_conv}")
+                                st.error(f"خطأ حرج في تحويل خيار التصفية لـ '{selected_column}': {e_fallback_conv}")
 
-                    multiselect_label = f"Values for '{selected_column}' (by count):"
+                    multiselect_label = f"قيم لـ '{selected_column}' (حسب العدد):"
 
                     selected_values = st.sidebar.multiselect(
                         multiselect_label,
@@ -189,10 +251,10 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
                         st.session_state.active_filters_votes[i]["values"] = selected_values
                 else:
                     st.sidebar.warning(
-                        f"Column '{selected_column}' not found for filtering. It might have been removed or changed."
+                        f"لم يتم العثور على العمود '{selected_column}' للتصفية. ربما تمت إزالته أو تغييره."
                     )
 
-            if st.sidebar.button(f"Remove Filter {i+1}", key=f"remove_filter_votes_{filter_id}"):
+            if st.sidebar.button(f"إزالة عامل التصفية {i+1}", key=f"remove_filter_votes_{filter_id}"):
                 filters_to_remove_votes.append(i)
 
         if filters_to_remove_votes:
@@ -202,8 +264,8 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
 
         st.sidebar.markdown("---")
         col1_sidebar, col2_sidebar = st.sidebar.columns(2)
-        apply_filters_button_votes = col1_sidebar.button("Apply Filters", key="apply_filters_btn_votes")
-        reset_filters_button_votes = col2_sidebar.button("Reset Filters", key="reset_filters_btn_votes")
+        apply_filters_button_votes = col1_sidebar.button("تطبيق عوامل التصفية", key="apply_filters_btn_votes")
+        reset_filters_button_votes = col2_sidebar.button("إعادة تعيين عوامل التصفية", key="reset_filters_btn_votes")
 
         if apply_filters_button_votes:
             temp_df = df_original.copy()
@@ -212,7 +274,7 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
                 for filt in st.session_state.active_filters_votes:
                     col = filt["column"]
                     vals = filt["values"]
-                    if col != "None" and vals and col in temp_df.columns:  # Added check col in temp_df.columns
+                    if col != "لا شيء" and vals and col in temp_df.columns:  # Added check col in temp_df.columns
                         col_type = df_original[col].dtype
                         try:
                             if pd.api.types.is_numeric_dtype(col_type):
@@ -221,7 +283,7 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
                                     try:
                                         converted_vals.append(pd.to_numeric(v))
                                     except ValueError:
-                                        st.warning(f"Could not convert '{v}' to number for '{col}'.")
+                                        st.warning(f"تعذر تحويل '{v}' إلى رقم لـ '{col}'.")
                                 if not converted_vals:
                                     continue
                                 temp_df = temp_df[temp_df[col].isin(converted_vals)]
@@ -234,22 +296,24 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
                             else:
                                 temp_df = temp_df[temp_df[col].astype(str).isin(map(str, vals))]
                         except Exception as e_filter_type:
-                            st.warning(f"Filter error on '{col}' with '{vals}': {e_filter_type}. Using string match.")
+                            st.warning(
+                                f"خطأ في التصفية على '{col}' بـ '{vals}': {e_filter_type}. باستخدام مطابقة السلسلة."
+                            )
                             temp_df = temp_df[temp_df[col].astype(str).isin(map(str, vals))]
                         filters_applied_count += 1
-                    elif col not in temp_df.columns and col != "None":
-                        st.warning(f"Filter column '{col}' not found. Skipping this filter.")
+                    elif col not in temp_df.columns and col != "لا شيء":
+                        st.warning(f"عمود التصفية '{col}' غير موجود. يتم تخطي عامل التصفية هذا.")
 
                 st.session_state.filtered_df_votes = temp_df
                 if filters_applied_count > 0:
-                    st.sidebar.success(f"Applied {filters_applied_count} filter(s).")
+                    st.sidebar.success(f"تم تطبيق {filters_applied_count} عامل (عوامل) تصفية.")
                 else:
-                    st.sidebar.info("No active filters applied. Showing all data.")
+                    st.sidebar.info("لا توجد عوامل تصفية نشطة. يتم عرض جميع البيانات.")
                 if filters_applied_count == 0:
                     st.session_state.filtered_df_votes = df_original  # Ensure reset if no filters actually applied
                 st.rerun()
             except Exception as e:
-                st.sidebar.error(f"Error applying filters: {e}")
+                st.sidebar.error(f"خطأ في تطبيق عوامل التصفية: {e}")
 
         if reset_filters_button_votes:
             perform_reset = bool(st.session_state.active_filters_votes)
@@ -263,24 +327,34 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
             if perform_reset:
                 st.session_state.active_filters_votes = []
                 st.session_state.filtered_df_votes = df_original
-                st.sidebar.info("All filters reset. Showing all data.")
+                st.sidebar.info("تمت إعادة تعيين جميع عوامل التصفية. يتم عرض جميع البيانات.")
                 st.rerun()
             else:
-                st.sidebar.info("No filters to reset.")
+                st.sidebar.info("لا توجد عوامل تصفية لإعادة تعيينها.")
+
+        # --- Load Database from CSV ---
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("تحميل قاعدة البيانات من ملف CSV")
+        uploaded_csv_file = st.sidebar.file_uploader("اختر ملف CSV لتحميله:", type=["csv"], key="csv_uploader")
+
+        if uploaded_csv_file is not None:
+            if st.sidebar.button("تحميل من CSV واستبدال", key="load_csv_btn"):
+                if load_db_from_csv(uploaded_csv_file):
+                    st.rerun()
 
         # --- Reset Database ---
         st.sidebar.markdown("---")
-        st.sidebar.subheader("Reset Database")
-        st.sidebar.warning("This will delete the current database and start fresh. Please be sure before proceeding.")
+        st.sidebar.subheader("إعادة تعيين قاعدة البيانات")
+        st.sidebar.warning("سيؤدي هذا إلى حذف قاعدة البيانات الحالية والبدء من جديد. يرجى التأكد قبل المتابعة.")
 
-        if st.sidebar.button("Reset Database", key="reset_db_btn"):
+        if st.sidebar.button("إعادة تعيين قاعدة البيانات", key="reset_db_btn"):
             if os.path.exists(DB_FILE):
                 os.remove(DB_FILE)
             st.session_state.clear()
-            st.success("Database reset. Data will be reloaded. Please rerun if needed.")
+            st.success("تمت إعادة تعيين قاعدة البيانات. سيتم إعادة تحميل البيانات. يرجى إعادة التشغيل إذا لزم الأمر.")
             st.rerun()
 
-        st.header("Voters List")
+        st.header("قائمة الناخبين")
         if st.session_state.filtered_df_votes is not None:
             # --- Calculate and Display Vote Counts (based on st.session_state.filtered_df_votes) ---
             if not st.session_state.filtered_df_votes.empty:
@@ -289,24 +363,24 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
                     voted_in_filtered = st.session_state.filtered_df_votes["voted"].astype(bool).sum()
                     col1_count, col2_count = st.columns(2)
                     with col1_count:
-                        st.metric(label="Voted (User Filters)", value=voted_in_filtered)
+                        st.metric(label="صوّت (حسب عوامل تصفية المستخدم)", value=voted_in_filtered)
                     with col2_count:
-                        st.metric(label="Total (User Filters)", value=total_in_filtered)
+                        st.metric(label="المجموع (حسب عوامل تصفية المستخدم)", value=total_in_filtered)
                     st.markdown("---")
                 else:
-                    st.warning("The 'voted' column is missing, cannot display vote count.")
+                    st.warning("عمود 'voted' مفقود، لا يمكن عرض عدد الأصوات.")
             else:
-                st.info("No voters in current user-filtered view to count.")  # Clarified message
+                st.info("لا يوجد ناخبون في العرض الحالي المصفى من قبل المستخدم لعدهم.")  # Clarified message
 
             # --- Prepare DataFrame for st.data_editor (df_for_editor) ---
             # Start with a copy of the dynamically filtered data
             df_for_editor = st.session_state.filtered_df_votes.copy()
 
             # Apply the permanent vote display filter based on radio button selection
-            if st.session_state.permanent_vote_display_filter == "Show only 'Voted'":
+            if st.session_state.permanent_vote_display_filter == "عرض من صوت فقط":
                 if "voted" in df_for_editor.columns:
                     df_for_editor = df_for_editor[df_for_editor["voted"].astype(bool)].copy()
-            elif st.session_state.permanent_vote_display_filter == "Show only 'Not Voted'":
+            elif st.session_state.permanent_vote_display_filter == "عرض من لم يصوت فقط":
                 if "voted" in df_for_editor.columns:
                     df_for_editor = df_for_editor[~df_for_editor["voted"].astype(bool)].copy()
             # If "Show All", no further filtering is done on df_for_editor here.
@@ -316,7 +390,7 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
             if "voted" in df_display.columns:
                 df_display["voted"] = df_display["voted"].astype(bool)
             else:
-                st.error("Critical: 'voted' column is missing from display data. Cannot proceed with editing.")
+                st.error("حرج: عمود 'voted' مفقود من بيانات العرض. لا يمكن المتابعة في التعديل.")
                 st.stop()
 
             edited_df = st.data_editor(
@@ -354,12 +428,12 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
                         if update_voted_status(person_app_id, st.session_state.id_column_name, new_voted_status):
                             updated_ids_count += 1
                         else:
-                            st.warning(f"Failed to update vote status for App ID {person_app_id} in DB.")
+                            st.warning(f"فشل تحديث حالة التصويت لمعرف التطبيق {person_app_id} في قاعدة البيانات.")
                     if updated_ids_count > 0:
-                        st.success(f"Vote status updated for {updated_ids_count} voter(s) in the database.")
+                        st.success(f"تم تحديث حالة التصويت لـ {updated_ids_count} ناخب (ناخبين) في قاعدة البيانات.")
                         st.session_state.df_votes = load_data_from_db()
                         if st.session_state.df_votes is None:
-                            st.error("Failed to reload data from DB after update. Critical error.")
+                            st.error("فشل إعادة تحميل البيانات من قاعدة البيانات بعد التحديث. خطأ حرج.")
                             st.session_state.filtered_df_votes = pd.DataFrame()
                             st.session_state.active_filters_votes = []
                             st.rerun()  # Try to reset to a somewhat stable state
@@ -372,7 +446,7 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
                                     col_reapply = filt_reapply["column"]
                                     vals_reapply = filt_reapply["values"]
                                     if (
-                                        col_reapply != "None"
+                                        col_reapply != "لا شيء"
                                         and vals_reapply
                                         and col_reapply in temp_df_after_update.columns
                                     ):
@@ -391,22 +465,33 @@ if st.session_state.df_votes is not None and not st.session_state.df_votes.empty
                                                     .isin(map(str, vals_reapply))
                                                 ]
                                         except Exception as e_reapply:
-                                            st.error(f"Error re-applying filter on '{col_reapply}': {e_reapply}")
+                                            st.error(
+                                                f"خطأ في إعادة تطبيق عامل التصفية على '{col_reapply}': {e_reapply}"
+                                            )
                             st.session_state.filtered_df_votes = temp_df_after_update
                             st.rerun()
-            st.write(f"Displaying {len(edited_df)} voter(s).")
+            st.write(f"عرض {len(edited_df)} ناخب (ناخبين).")
         else:
-            st.info("No data to display. You might need to reset the database or check the Excel file.")
+            st.info("لا توجد بيانات لعرضها. قد تحتاج إلى إعادة تعيين قاعدة البيانات أو التحقق من ملف Excel.")
     # This else corresponds to if df_votes became None due to missing voter_id
-    elif st.session_state.df_votes is None and "voter_id" in st.session_state.get("id_column_name", ""):
-        st.warning(
-            "Voter data is not available. Please use the 'Reset Database' button if the issue persists after a rerun."
+    else:  # This handles the case where df_votes is None from the start or after a critical error
+        st.error(
+            "لا يمكن تحميل بيانات الناخبين. يرجى التحقق من وجود ملف قاعدة البيانات "
+            "أو إعادة تعيين قاعدة البيانات إذا استمرت المشكلة."
         )
+        # Optionally, provide a button to attempt re-initialization or guide the user.
+        if st.button("محاولة إعادة تهيئة قاعدة البيانات"):
+            if os.path.exists(DB_FILE):
+                os.remove(DB_FILE)
+            st.session_state.clear()
+            st.rerun()
 
-
-elif st.session_state.get("df_votes") is None and os.path.exists(DB_FILE):
-    st.warning("Failed to load data from the existing database. Try resetting the database.")
-elif not os.path.exists(EXCEL_FILE):
-    st.error(f"Source Excel file '{EXCEL_FILE}' not found. Cannot initialize the database.")
-else:
-    st.info("DB initializing or issue occurred. Wait/refresh. Reset if persists.")
+# Placeholder for any additional UI elements or logic outside the main data-dependent block.
+# For example, a global footer or help section could go here.
+else:  # This handles the case where df_votes is None from the start
+    st.error("فشل تحميل بيانات الناخبين عند بدء التشغيل. حاول إعادة تعيين قاعدة البيانات.")
+    if st.sidebar.button("إعادة تعيين قاعدة البيانات الآن"):
+        if os.path.exists(DB_FILE):
+            os.remove(DB_FILE)
+        st.session_state.clear()  # Clear session state to trigger re-initialization
+        st.rerun()
